@@ -15,28 +15,27 @@ find_package(Qt6 6.5 REQUIRED COMPONENTS Core Network)
 
 add_executable(ServerController
     src/main.cpp
+
     src/Common.h src/Common.cpp
     src/Logs/Log.h src/Logs/Log.cpp
+    src/AgrParser.h src/AgrParser.cpp
     src/Application.h src/Application.cpp
     src/AppVariables.h src/AppVariables.cpp
 
     src/Tasks/TaskManager.h src/Tasks/TaskManager.cpp
-    src/Tasks/NetworkSkan.h src/Tasks/NetworkSkan.cpp
-
     src/Tasks/ConsoleCommand.h src/Tasks/ConsoleCommand.cpp
 
-
+    src/Network/NetworkSkan.h src/Network/NetworkSkan.cpp
     src/Network/Protocol/RawSocket.h     src/Network/Protocol/RawSocket.cpp
     src/Network/Protocol/ICMP/ICMP.h     src/Network/Protocol/ICMP/ICMP.cpp
     src/Network/Protocol/ARP/ARP.h       src/Network/Protocol/ARP/ARP.cpp
-    src/Network/Protocol/LLDP/LLDP.h src/Network/Protocol/LLDP/LLDP.cpp
-
+    src/Network/Protocol/LLDP/LLDP.h     src/Network/Protocol/LLDP/LLDP.cpp
 
     src/HTTPServer/NetWorker.h src/HTTPServer/NetWorker.cpp
     src/HTTPServer/CommandHandlers/HandlersFactory.h src/HTTPServer/CommandHandlers/HandlersFactory.cpp
-    Проблемы_1
-    src/AgrParser.h src/AgrParser.cpp
 
+    src/Models/DeviceInfo.h  src/Models/DeviceInfo.cpp
+    src/Models/NetAdapter.h  src/Models/NetAdapter.cpp
 )
 
 target_link_libraries(ServerController
