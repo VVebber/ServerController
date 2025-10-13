@@ -23,6 +23,7 @@ const QString UNIX_COMMAND_HOSTNAME    = "hostname";
 const QString UNIX_FLAG_I              = "-I";
 const QString UNIX_ARG_ROUTE           = "route";
 const QString UNIX_ARG_LINK            = "link";
+const QString UNIX_ARG_ADDR            = "addr";
 const QString UNIX_ARG_SHOW            = "show";
 
 static constexpr unsigned char BROADCAST_MAC[6] = {0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF};

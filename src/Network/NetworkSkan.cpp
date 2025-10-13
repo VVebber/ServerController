@@ -11,7 +11,7 @@
 
 
 
-NetworkSkan::NetworkSkan()
+NetworkSkan::NetworkSkan(NetAdapter adapter): m_adapter(adapter)
 {
   m_ICMP = new ICMP;
   m_ICMP_Timer = new QTimer;
@@ -22,8 +22,17 @@ NetworkSkan::NetworkSkan()
   m_mutex = new QMutex;
 }
 
+void NetworkSkan::updateAdapter(NetAdapter adapter)
+{
+  m_adapter = adapter;
+}
+
+
 void NetworkSkan::start()
 {
+  qDebug()<<m_adapter.name<<": "<<Q_FUNC_INFO;
+
+  return;
   if (m_ICMP_Timer != nullptr) {
     QObject::connect(m_ICMP_Timer, &QTimer::timeout, [this]() {
       QMutexLocker locker(m_mutex);

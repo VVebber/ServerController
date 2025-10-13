@@ -1,13 +1,17 @@
 #ifndef NETWORKSKAN_H
 #define NETWORKSKAN_H
 
+#include "../Models/NetAdapter.h"
+
 class NetworkSkan
 {
 public:
-  NetworkSkan();
+  NetworkSkan(NetAdapter adapter);
 
   void start();
   void stop();
+
+  void updateAdapter(NetAdapter adapter);
 
 private:
   class ICMP* m_ICMP;
@@ -17,6 +21,8 @@ private:
   class QTimer* m_ARP_Timer;
 
   class QMutex *m_mutex;
+
+  NetAdapter m_adapter;
 };
 
 #endif // NETWORKSKAN_H

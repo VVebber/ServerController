@@ -2,6 +2,7 @@
 #define TASKMANAGER_H
 
 #include <QObject>
+#include <QMap>
 
 class TaskManager : public QObject
 {
@@ -12,8 +13,9 @@ signals:
 
 private:
   TaskManager();
-  void checkInterfaces();
-  void loadPrimaryInterfaceInfo();
+  ~TaskManager();
+  void fetchInterfaceInfo();
+  void addAdapter(QList<class NetAdapter>& adapterList, NetAdapter& adapter);
 
   bool getCurrentIp();
 
@@ -29,9 +31,10 @@ private:
   static TaskManager* m_taskManager;
 
   int m_idTimer;
-  bool isFinished = false;
+  // bool isFinished = false;
 
   class AppVariables* m_appVariables;
+  QMap<QString, class NetworkSkan*> m_networkSkanList;
 };
 
 #endif // TASKMANAGER_H

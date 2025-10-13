@@ -5,6 +5,7 @@
 #include "../Common.h"
 #include "../AppVariables.h"
 #include "../Models/NetAdapter.h"
+#include "../Network/NetworkSkan.h"
 
 #include <QThread>
 #include <QDebug>
@@ -40,6 +41,15 @@ TaskManager::TaskManager()
   m_idTimer = 0;
 }
 
+TaskManager::~TaskManager()
+{
+  for(auto& skan : m_networkSkanList)
+  {
+    skan->stop();
+    delete skan;
+  }
+}
+
 void TaskManager::resetInstance()
 {
   qDebug()<<Q_FUNC_INFO;
@@ -48,6 +58,8 @@ void TaskManager::resetInstance()
   {
     QThread* taskThread = m_taskManager->thread();
 
+    taskThread->quit();
+    taskThread->wait();
 
     delete taskThread;
     delete m_taskManager;
@@ -59,7 +71,6 @@ void TaskManager::process()
   qDebug()<<Q_FUNC_INFO;
   getCurrentIp();
 
-
   // 6 * 60 * 60 * 1000 6 часов
   m_idTimer = startTimer(6 * 60 * 60 * 1000);
   timerEvent(nullptr);
@@ -68,17 +79,26 @@ void TaskManager::process()
 void TaskManager::timerEvent(QTimerEvent* event)
 {
   qDebug()<<Q_FUNC_INFO;
-  loadPrimaryInterfaceInfo();
-  checkInterfaces();
+  fetchInterfaceInfo();
 
   QVariant v = AppVariables::instance().get(KEY_NET_ADAPTERS);
   QList<NetAdapter> adapters = v.value<QList<NetAdapter>>();
 
   for(auto& adapter : adapters)
   {
-    qDebug()<<"name: "<<adapter.name;
-    qDebug()<<"mac: "<<adapter.mac;
-    qDebug()<<"active: "<<adapter.isAtive;
+    if(m_networkSkanList.contains(adapter.name))
+    {
+      m_networkSkanList[adapter.name]->updateAdapter(adapter);
+      continue;
+    }
+
+    if(adapter.name == "enp2s0")
+    {
+      NetworkSkan* scan = new NetworkSkan(adapter);
+
+      m_networkSkanList.insert(adapter.name, scan);
+      scan->start();
+    }
   }
 }
 
@@ -103,16 +123,19 @@ bool TaskManager::getCurrentIp()
   return false;
 }
 
-void TaskManager::loadPrimaryInterfaceInfo()
+void TaskManager::fetchInterfaceInfo()
 {
   qDebug()<<Q_FUNC_INFO;
 
-  QStringList args = {UNIX_ARG_LINK};
+  QStringList args = {UNIX_ARG_ADDR};
   ConsoleCommand ipShow;
+
   if(ipShow.runCommand(UNIX_COMMAND_IP, args))
   {
+    QStringList lines =ipShow.m_standartOut.split("\n", Qt::SkipEmptyParts);
 
     QList<NetAdapter> adapterList;
+    NetAdapter currentAdapter;
 
     if(m_appVariables->contains(KEY_NET_ADAPTERS))
     {
@@ -122,72 +145,62 @@ void TaskManager::loadPrimaryInterfaceInfo()
 
     QRegularExpression macRegex(R"(link/\w+\s+([0-9a-fA-F]{2}(?::[0-9a-fA-F]{2}){5}))");
     QRegularExpression ifInterfaceRegex(R"(\d+: ([^:]+))");
+    QRegularExpression ipWithMaskRegex(R"(inet\s+(\d{1,3}(?:\.\d{1,3}){3}/\d{1,2}))");
 
-    QRegularExpressionMatchIterator macMatch = macRegex.globalMatch(ipShow.m_standartOut);
-    QRegularExpressionMatchIterator ifaceMatch = ifInterfaceRegex.globalMatch(ipShow.m_standartOut);
-
-    while (ifaceMatch.hasNext() && macMatch.hasNext())
+    for(const QString& line: lines)
     {
-      QString name = ifaceMatch.next().captured(1);
-      QString mac = macMatch.next().captured(1);
-
-      NetAdapter adapter;
-      adapter.name = name;
-      adapter.mac = mac;
-
-      bool isFind = false;
-      for(auto& adapter : adapterList)
+      QRegularExpressionMatch ifaceM = ifInterfaceRegex.match(line);
+      if(ifaceM.hasMatch())
       {
-        if(adapter.mac == mac)
-        {
-          isFind = true;
-        }
+        addAdapter(adapterList, currentAdapter);
+        currentAdapter.name = ifaceM.captured(1);
+        continue;
       }
 
-      if(!isFind && name != "lo")
-        adapterList.append(adapter);
+      QRegularExpressionMatch macM = macRegex.match(line);
+      if(macM.hasMatch())
+      {
+          currentAdapter.mac = macM.captured(1);
+          continue;
+      }
+
+      QRegularExpressionMatch ipM = ipWithMaskRegex.match(line);
+      if(ipM.hasMatch())
+      {
+          QString ipv4 = ipM.captured(1);
+          currentAdapter.ipv4 = ipv4.section("/", 0, 0);
+          currentAdapter.setIp(ipv4.section("/", 1, 1));
+          continue;
+      }
     }
+    addAdapter(adapterList, currentAdapter);
+
     m_appVariables->add(KEY_NET_ADAPTERS, QVariant::fromValue(adapterList));
   }
 }
 
-void TaskManager::checkInterfaces()
+void TaskManager::addAdapter(QList<NetAdapter>& adapterList, NetAdapter& adapter)
 {
-  qDebug()<<Q_FUNC_INFO;
-
-  QStringList args = {UNIX_ARG_ROUTE};
-  ConsoleCommand getStatusInterface;
-  if(getStatusInterface.runCommand(UNIX_COMMAND_IP, args))
+  if(!adapter.name.isEmpty() && adapter.name != "lo")
   {
-    QStringList routeLines = getStatusInterface.m_standartOut.split("\n", Qt::SkipEmptyParts);
-    routeLines.pop_front();
-
-    QVariant v = m_appVariables->get(KEY_NET_ADAPTERS);
-    QList<NetAdapter> adapters = v.value<QList<NetAdapter>>();
-
-    for (NetAdapter &adapter : adapters)
+    int isFind = -1;
+    for(int i = 0; i < adapterList.count(); i++)
     {
-      adapter.isAtive = false;
-    }
-
-    for (const QString &line : routeLines)
-    {
-      QStringList parts = line.split(' ', Qt::SkipEmptyParts);
-
-
-      for (NetAdapter &adapter : adapters)
+      if(adapterList[i].name == adapter.name)
       {
-        if (parts.contains(adapter.name))
-        {
-          if(!parts.contains("linkdown"))
-          {
-            adapter.isAtive = true;
-            continue;
-          }
-        }
+        isFind = i;
+        break;
       }
     }
-    m_appVariables->add(KEY_NET_ADAPTERS, QVariant::fromValue(adapters));
+
+    if(isFind == -1)
+    {
+      adapterList.append(adapter);
+    }
+    else
+    {
+      adapterList[isFind] = adapter;
+    }
+    adapter = NetAdapter();
   }
 }
-

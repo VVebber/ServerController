@@ -1,8 +1,8 @@
 #include "AppVariables.h"
 // #include "Tasks/ObjectInfo.h"
-#include "Models/NetAdapter.h"
+// #include "Models/NetAdapter.h"
 
-#include <QMetaType>
+// #include <QMetaType>
 
 // Q_DECLARE_METATYPE(QList<ObjectInfo>)
 
