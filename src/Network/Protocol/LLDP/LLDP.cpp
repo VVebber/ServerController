@@ -1,16 +1,16 @@
-#include "LLDP.h"
+// #include "LLDP.h"
 
-#include <sys/socket.h>
-#include <netinet/in.h>
+// #include <sys/socket.h>
+// #include <netinet/in.h>
 
-#include <linux/if_ether.h>
+// #include <linux/if_ether.h>
 
-LLDP::LLDP()
-{
-  createSocket(AF_PACKET, SOCK_RAW, htons(ETH_P_LLDP));
-}
+// LLDP::LLDP()
+// {
+//   createSocket(AF_PACKET, SOCK_RAW, htons(ETH_P_LLDP));
+// }
 
-void LLDP::process()
-{
+// void LLDP::process()
+// {
 
-}
+// }

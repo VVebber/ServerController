@@ -15,9 +15,9 @@
 static
 #elif defined(Q_OS_LINUX)
 
-static std::string appName;
 #endif
 
+static std::string appName;
 static std::string outputMode;
 
 void LogMessageOutpot(QtMsgType type, const QMessageLogContext& context, const QString& msg)

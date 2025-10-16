@@ -4,6 +4,7 @@
 #include "../RawSocket.h"
 
 #include <stdint.h>
+#include <QtGlobal>
 
 struct PingRes
 {
@@ -22,10 +23,14 @@ public:
   CheckPing();
   ~CheckPing();
 
-  PingRes process(char* ip);
+  PingRes process(const char* ip);
 
 private:
+#if defined(Q_OS_LINUX)
   struct icmphdr* createPacket(char* packet);
+#elif defined(Q_OS_MACOS)
+  struct icmp* createPacket(char* packet);
+#endif
 
 private:
   uint16_t checksum(void *data, int len);

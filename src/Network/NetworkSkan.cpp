@@ -80,7 +80,6 @@ void NetworkSkan::ping()
   int max2 = (count >= 2 ? 255 : 0);
   int max1 = (count >= 1 ? 255 : 0);
 
-  m_CheckPing.process("192.168.1.54");
 
   return;
   for(int i3 = 0; i3 <= max2; i3++)
@@ -89,7 +88,7 @@ void NetworkSkan::ping()
     {
       for(int i1 = 0; i1 <= max1; i1++)
       {
-
+        m_CheckPing.process(m_adapter.ipv4.arg(i1).toStdString().c_str());
       }
     }
   }

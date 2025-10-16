@@ -6,7 +6,7 @@
 
 #include <sys/socket.h>
 #include <netinet/in.h>
-#include <bits/stdc++.h>
+// #include <bits/stdc++.h>
 #include <netinet/ip_icmp.h>
 
 #include <arpa/inet.h>
@@ -49,6 +49,7 @@ uint16_t CheckPing::checksum(void *data, int len) {
   return ~sum;
 }
 
+#if defined(Q_OS_LINUX)
 struct icmphdr* CheckPing::createPacket(char* packet)
 {
   struct icmphdr* icmp = (struct icmphdr*) packet;
@@ -62,20 +63,43 @@ struct icmphdr* CheckPing::createPacket(char* packet)
 
   return icmp;
 }
+#elif defined(Q_OS_MACOS)
 
-PingRes CheckPing::process(char* ip)
+struct icmp* CheckPing::createPacket(char* packet)
+{
+  struct icmp* icmpPacket = (struct icmp*) packet;
+  icmpPacket->icmp_type = ICMP_ECHO;
+  icmpPacket->icmp_code = 0;
+  icmpPacket->icmp_hun.ih_idseq.icd_id = getppid();
+  icmpPacket->icmp_hun.ih_idseq.icd_id = htons(1);
+  icmpPacket->icmp_cksum = 0;
+
+  icmpPacket->icmp_cksum = checksum(icmpPacket, sizePacket);
+
+  return icmpPacket;
+}
+#endif
+
+
+
+PingRes CheckPing::process(const char* ip)
 {
   PingRes result;
   result.sent = countPackets;
-  result.ip = ip;
+  result.ip = new char[strlen(ip) + 1];
+  std::strcpy(result.ip, ip);
+
 
   sockaddr_in toAddr{};
   toAddr.sin_family = AF_INET;
   toAddr.sin_port = htons(0);
 
   char packet[sizePacket];
-  struct icmphdr* icmp = createPacket(packet);
-
+#if defined(Q_OS_LINUX)
+  struct icmphdr* icmpPacket = createPacket(packet);
+#elif defined(Q_OS_MACOS)
+  struct icmp* icmpPacket = createPacket(packet);
+#endif
   inet_pton(AF_INET, ip, &toAddr.sin_addr);
 
   uint64_t totalTime = 0;
@@ -93,7 +117,12 @@ PingRes CheckPing::process(char* ip)
 
     auto msBefore = std::chrono::steady_clock::now();
     char buffer[sizeBuffer];
-    icmphdr *icmpResHeader = (struct icmphdr*) buffer;
+
+#if defined(Q_OS_LINUX)
+    struct icmphdr *icmpResHeader = (struct icmphdr*) buffer;
+#elif defined(Q_OS_MACOS)
+    struct icmp* icmpResHeader = (struct icmp*) buffer;
+#endif
 
     int date_length = recv(m_socket, icmpResHeader, sizeBuffer, 0);
 
@@ -101,7 +130,15 @@ PingRes CheckPing::process(char* ip)
 
     if(date_length != -1)
     {
-      if(unsigned(icmpResHeader->type) == ICMP_ECHOREPLY)
+      int type = -1;
+
+#if defined(Q_OS_LINUX)
+    type = unsigned(icmpResHeader->type);
+#elif defined(Q_OS_MACOS)
+      type = unsigned(icmpResHeader->icmp_type);
+#endif
+
+      if(type == ICMP_ECHOREPLY)
       {
         uint64_t ms = std::chrono::duration_cast<std::chrono::milliseconds>(msAfter - msBefore).count();
         totalTime += ms;
@@ -118,7 +155,6 @@ PingRes CheckPing::process(char* ip)
   {
     result.acgMs = totalTime /successReplies;
   }
-
   return result;
 }
 

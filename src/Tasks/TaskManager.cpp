@@ -92,7 +92,7 @@ void TaskManager::timerEvent(QTimerEvent* event)
       continue;
     }
 
-    if(adapter.name == "enp2s0")
+    if(adapter.isAtive == true)
     {
       NetworkSkan* scan = new NetworkSkan(adapter);
 
