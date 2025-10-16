@@ -1,25 +1,33 @@
 #include "NetworkSkan.h"
 
-// #include "./ObjectInfo.h"
 #include "../Common.h"
 #include "../AppVariables.h"
-#include "../Network/Protocol/ICMP/ICMP.h"
+#include "../Network/Protocol/ICMP/CheckPing.h"
 #include "../Network/Protocol/ARP/ARP.h"
 
-#include <QTimer>
-#include <QMutex>
+#include "../Models/DeviceInfo.h"
 
+#include <QMutex>
+#include <QTimer>
+#include <QElapsedTimer>
+#include <QSharedPointer>
+
+CheckPing NetworkSkan::m_CheckPing;
 
 
 NetworkSkan::NetworkSkan(NetAdapter adapter): m_adapter(adapter)
 {
-  m_ICMP = new ICMP;
-  m_ICMP_Timer = new QTimer;
+  qDebug()<<Q_FUNC_INFO;
+  m_appVariables = &AppVariables::instance();
 
-  m_ARP = new ARP;
-  m_ARP_Timer = new QTimer;
-
+  m_timer = new QTimer;
   m_mutex = new QMutex;
+}
+
+NetworkSkan::~NetworkSkan()
+{
+  delete m_timer;
+  delete m_mutex;
 }
 
 void NetworkSkan::updateAdapter(NetAdapter adapter)
@@ -32,51 +40,64 @@ void NetworkSkan::start()
 {
   qDebug()<<m_adapter.name<<": "<<Q_FUNC_INFO;
 
-  return;
-  if (m_ICMP_Timer != nullptr) {
-    QObject::connect(m_ICMP_Timer, &QTimer::timeout, [this]() {
-      QMutexLocker locker(m_mutex);
-      m_ICMP->process();
-    });
+  bool iFind = true;
 
-    m_ICMP_Timer->start(1000);
-  }
+  m_timer->setInterval(1 * 1000);
+  m_lastPing.start();
 
-  if(m_ARP_Timer != nullptr)
+
+  QObject::connect(m_timer, &QTimer::timeout, [=](){
+
+    if(m_lastPing.hasExpired(1 * 1 * 1000))
+    {
+      ping();
+      m_lastPing.restart();
+    }
+
+    if(m_lastARP.hasExpired(2 * 60 * 1000))
+    {
+      // qDebug()<<"Ping";
+      m_lastARP.elapsed();
+    }
+  });
+  m_timer->start();
+}
+
+void NetworkSkan::ping()
+{
+  qDebug()<<Q_FUNC_INFO;
+
+  SharedDeviceList DeviseList;
+
+  if(m_appVariables->contains(KEY_DEVICE_LIST))
   {
-    QObject::connect(m_ARP_Timer, &QTimer::timeout, [this]() {
-      QMutexLocker locker(m_mutex);
-      // QVariant var = AppVariables::instance().get(KEY_OBJECT_INFO);
-      // QList<ObjectInfo>* objectList = var.value<QList<ObjectInfo>*>();
-      // for(int i = 0; i < objectList->count(); i++)
-      // {
-      //   // m_ARP->process((*objectList)[i]);
-      // }
-    });
-
-    m_ARP_Timer->start(1000);
+    QVariant v = m_appVariables->get(KEY_DEVICE_LIST);
+    DeviseList = v.value<SharedDeviceList>();
   }
 
-  m_ICMP->process();
-  // QVariant var = AppVariables::instance().get(KEY_OBJECT_INFO);
-  // QList<ObjectInfo>* objectList = var.value<QList<ObjectInfo>*>();
-  // for(int i = 0; i < objectList->count(); i++)
-  // {
-    // m_ARP->process((*objectList)[i]);
-  // }
+  int count = m_adapter.ipv4.count("%");
+  int max3 = (count >= 3 ? 255 : 0);
+  int max2 = (count >= 2 ? 255 : 0);
+  int max1 = (count >= 1 ? 255 : 0);
+
+  m_CheckPing.process("192.168.1.54");
+
+  return;
+  for(int i3 = 0; i3 <= max2; i3++)
+  {
+    for(int i2 = 0; i2 <= max2; i2++)
+    {
+      for(int i1 = 0; i1 <= max1; i1++)
+      {
+
+      }
+    }
+  }
+  //Тут будет ping по Adapter и добавление в SharedDeviceList;
 }
 
 void NetworkSkan::stop()
 {
-  if (m_ICMP_Timer) {
-    m_ICMP_Timer->stop();
-    m_ICMP_Timer->deleteLater();
-    m_ICMP_Timer = nullptr;
-  }
-
-  if (m_ARP_Timer) {
-    m_ARP_Timer->stop();
-    m_ARP_Timer->deleteLater();
-    m_ARP_Timer = nullptr;
-  }
+  m_timer->stop();
+  // QObject::disconnect(m_timer, &QTimer::timeout);
 }

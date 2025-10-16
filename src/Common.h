@@ -7,13 +7,15 @@
 // const QString
 //!TODO?
 
+#define SharedDeviceList QSharedPointer<QList<DeviceInfo>>
+
 const QString ARG_CONSOLE              = "console";
 
 const QString KEY_IF_NAME              = "interface_name";
 const QString KEY_IF_INDEX             = "interface_index";
 const QString KEY_IF_MAC               = "mac_address";
 const QString KEY_CURRENT_IP           = "current_ip";
-// const QString KEY_OBJECT_INFO          = "object_info";
+const QString KEY_DEVICE_LIST          = "device_list";
 const QString KEY_NET_ADAPTERS         = "networkAdapters";
 const QString KEY_LOG_OUTPUT_MODE      = "logOutputMode";
 

@@ -26,8 +26,9 @@ add_executable(ServerController
     src/Tasks/ConsoleCommand.h src/Tasks/ConsoleCommand.cpp
 
     src/Network/NetworkSkan.h src/Network/NetworkSkan.cpp
-    src/Network/Protocol/RawSocket.h     src/Network/Protocol/RawSocket.cpp
-    src/Network/Protocol/ICMP/ICMP.h     src/Network/Protocol/ICMP/ICMP.cpp
+    src/Network/Protocol/RawSocket.h           src/Network/Protocol/RawSocket.cpp
+    src/Network/Protocol/ICMP/CheckPing.h     src/Network/Protocol/ICMP/CheckPing.cpp
+
     src/Network/Protocol/ARP/ARP.h       src/Network/Protocol/ARP/ARP.cpp
     src/Network/Protocol/LLDP/LLDP.h     src/Network/Protocol/LLDP/LLDP.cpp
 

@@ -45,5 +45,7 @@ bool Application::initialize()
     qWarning() <<"Не удалось запустить прослушивание http";
   }
 
+
+
   return true;
 }

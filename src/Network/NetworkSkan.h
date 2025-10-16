@@ -1,12 +1,14 @@
 #ifndef NETWORKSKAN_H
 #define NETWORKSKAN_H
 
+#include <QElapsedTimer>
 #include "../Models/NetAdapter.h"
 
 class NetworkSkan
 {
 public:
   NetworkSkan(NetAdapter adapter);
+  ~NetworkSkan();
 
   void start();
   void stop();
@@ -14,15 +16,19 @@ public:
   void updateAdapter(NetAdapter adapter);
 
 private:
-  class ICMP* m_ICMP;
-  class ARP* m_ARP;
+  void ping();
 
-  class QTimer* m_ICMP_Timer;
-  class QTimer* m_ARP_Timer;
-
+private:
   class QMutex *m_mutex;
+  class QTimer *m_timer;
+
+  QElapsedTimer m_lastPing;
+  QElapsedTimer m_lastARP;
+
+  static class CheckPing m_CheckPing;
 
   NetAdapter m_adapter;
+  class AppVariables* m_appVariables;
 };
 
 #endif // NETWORKSKAN_H
