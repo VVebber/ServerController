@@ -12,8 +12,8 @@ public:
   virtual void createSocket(int domain, int type, int protocol);
   virtual void closeSockets();
 
-  // virtual void send(const void* data, size_t len) = 0;
-  // virtual ssize_t receive(void* buffer, size_t len) = 0;
+protected:
+  void setTimeval(int ms);
 
 protected:
   int m_socket = -1;

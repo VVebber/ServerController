@@ -8,12 +8,21 @@
 
 AppVariables::AppVariables()
 {
-  // qRegisterMetaType<QList<ObjectInfo>>("QList<ObjectInfo>");
-  // qRegisterMetaType<QList<NetAdapter>>("QList<NetAdapter>");
+  qDebug()<<Q_FUNC_INFO;
+}
+
+AppVariables::~AppVariables()
+{
+  qDebug()<<Q_FUNC_INFO;
 }
 
 AppVariables& AppVariables::instance()
 {
   static AppVariables instance;
   return instance;
+}
+
+void AppVariables::resetInstance()
+{
+
 }

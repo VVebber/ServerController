@@ -7,10 +7,10 @@
 #include "../Models/NetAdapter.h"
 #include "../Network/NetworkSkan.h"
 
-#include <QThread>
 #include <QDebug>
+#include <QThread>
+#include <QCoreApplication>
 #include <QRegularExpression>
-
 
 TaskManager *TaskManager::m_taskManager = nullptr;
 
@@ -26,28 +26,12 @@ TaskManager* TaskManager::instance()
 
     connect(taskThread, &QThread::started, m_taskManager, &TaskManager::process);
     connect(m_taskManager, &TaskManager::finished, taskThread, &QThread::quit);
+    connect(taskThread, &QThread::finished, m_taskManager, &TaskManager::quit);
 
     taskThread->start();
   }
 
   return m_taskManager;
-}
-
-TaskManager::TaskManager()
-{
-  qDebug()<<Q_FUNC_INFO;
-  m_appVariables = &AppVariables::instance();
-
-  m_idTimer = 0;
-}
-
-TaskManager::~TaskManager()
-{
-  for(auto& skan : m_networkSkanList)
-  {
-    skan->stop();
-    delete skan;
-  }
 }
 
 void TaskManager::resetInstance()
@@ -61,8 +45,43 @@ void TaskManager::resetInstance()
     taskThread->quit();
     taskThread->wait();
 
+    // while(taskThread->isRunning())
+    // {
+    //   QThread::msleep(1);
+    //   QCoreApplication::instance()->processEvents(QEventLoop::AllEvents, 100);
+    // }
+
     delete taskThread;
     delete m_taskManager;
+  }
+}
+
+TaskManager::TaskManager()
+{
+  qDebug()<<Q_FUNC_INFO;
+  m_appVariables = &AppVariables::instance();
+}
+
+TaskManager::~TaskManager()
+{
+  qDebug()<<Q_FUNC_INFO;
+
+
+}
+
+void TaskManager::quit()
+{
+  qDebug()<<Q_FUNC_INFO;
+
+  if (m_idTimer) {
+    killTimer(m_idTimer);
+    m_idTimer = 0;
+  }
+
+  for(auto& skan : m_networkSkanList)
+  {
+    skan->stop();
+    delete skan;
   }
 }
 
@@ -92,13 +111,10 @@ void TaskManager::timerEvent(QTimerEvent* event)
       continue;
     }
 
-    if(adapter.isAtive == true)
-    {
-      NetworkSkan* scan = new NetworkSkan(adapter);
+    NetworkSkan* scan = new NetworkSkan(adapter);
 
-      m_networkSkanList.insert(adapter.name, scan);
-      scan->start();
-    }
+    m_networkSkanList.insert(adapter.name, scan);
+    scan->start();
   }
 }
 
@@ -146,6 +162,7 @@ void TaskManager::fetchInterfaceInfo()
     QRegularExpression macRegex(R"(link/\w+\s+([0-9a-fA-F]{2}(?::[0-9a-fA-F]{2}){5}))");
     QRegularExpression ifInterfaceRegex(R"(\d+: ([^:]+))");
     QRegularExpression ipWithMaskRegex(R"(inet\s+(\d{1,3}(?:\.\d{1,3}){3}/\d{1,2}))");
+    QRegularExpression flagsRegex(R"(<([^>]+)>)");
 
     for(const QString& line: lines)
     {
@@ -154,23 +171,34 @@ void TaskManager::fetchInterfaceInfo()
       {
         addAdapter(adapterList, currentAdapter);
         currentAdapter.name = ifaceM.captured(1);
+        currentAdapter.ifIndex = ifaceM.captured(0).section(":", 0,0).toInt();
+      }
+
+      QRegularExpressionMatch flagsM = flagsRegex.match(line);
+      if(flagsM.hasMatch())
+      {
+        QString flags = flagsM.captured(1);
+        if (!flags.contains("NO-CARRIER") && (flags.contains("UP") || flags.contains("LOWER_UP")))
+        {
+          currentAdapter.isAtive = true;
+        }
         continue;
       }
 
       QRegularExpressionMatch macM = macRegex.match(line);
       if(macM.hasMatch())
       {
-          currentAdapter.mac = macM.captured(1);
-          continue;
+        currentAdapter.mac = macM.captured(1);
+        continue;
       }
 
       QRegularExpressionMatch ipM = ipWithMaskRegex.match(line);
       if(ipM.hasMatch())
       {
-          QString ipv4 = ipM.captured(1);
-          currentAdapter.ipv4 = ipv4.section("/", 0, 0);
-          currentAdapter.setIp(ipv4.section("/", 1, 1));
-          continue;
+        QString ipv4 = ipM.captured(1);
+        currentAdapter.ipv4 = ipv4.section("/", 0, 0);
+        currentAdapter.setIp(ipv4.section("/", 1, 1));
+        continue;
       }
     }
     addAdapter(adapterList, currentAdapter);

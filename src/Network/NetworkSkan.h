@@ -23,9 +23,9 @@ private:
   class QTimer *m_timer;
 
   QElapsedTimer m_lastPing;
-  QElapsedTimer m_lastARP;
 
   static class CheckPing m_CheckPing;
+  static class ARP_Ping m_ARP_ping;
 
   NetAdapter m_adapter;
   class AppVariables* m_appVariables;

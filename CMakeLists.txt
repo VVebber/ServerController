@@ -29,7 +29,7 @@ add_executable(ServerController
     src/Network/Protocol/RawSocket.h           src/Network/Protocol/RawSocket.cpp
     src/Network/Protocol/ICMP/CheckPing.h     src/Network/Protocol/ICMP/CheckPing.cpp
 
-    src/Network/Protocol/ARP/ARP.h       src/Network/Protocol/ARP/ARP.cpp
+    src/Network/Protocol/ARP/ARP_Ping.h       src/Network/Protocol/ARP/ARP_Ping.cpp
     src/Network/Protocol/LLDP/LLDP.h     src/Network/Protocol/LLDP/LLDP.cpp
 
     src/HTTPServer/NetWorker.h src/HTTPServer/NetWorker.cpp
@@ -37,6 +37,7 @@ add_executable(ServerController
 
     src/Models/DeviceInfo.h  src/Models/DeviceInfo.cpp
     src/Models/NetAdapter.h  src/Models/NetAdapter.cpp
+    src/Tasks/CommandController.h src/Tasks/CommandController.cpp
 )
 
 target_link_libraries(ServerController

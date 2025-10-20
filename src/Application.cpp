@@ -1,17 +1,18 @@
 #include "Application.h"
 
 #include "Tasks/TaskManager.h"
+// #include "Tasks/CommandController.h"
 
 #include <QDebug>
-
-// #include "Tasks/ObjectInfo.h"
 
 Application::Application(int &argc, char **argv) :
   QCoreApplication(argc, argv)
 {
-  // QList<ObjectInfo>* objectList = new QList<ObjectInfo>;
 
-  // AppVariables::instance().add(KEY_OBJECT_INFO, QVariant::fromValue(objectList));
+}
+
+Application::~Application()
+{
 }
 
 int Application::start()
@@ -35,10 +36,24 @@ void Application::exitApp()
   TaskManager::resetInstance();
 }
 
+bool Application::startCommandController()
+{
+  // if(!CommandController::instance()->start())
+  // {
+  //   return false;
+  // }
+
+  return true;
+}
 
 bool Application::initialize()
 {
   qDebug()<<Q_FUNC_INFO;
+
+  // if(!startCommandController())
+  // {
+  //   return false;
+  // }
 
   if(!startHTTP())
   {

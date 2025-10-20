@@ -3,6 +3,16 @@
 #include "AgrParser.h"
 
 #include <iostream>
+
+#ifdef Q_OS_LINUX
+  #include <signal.h>
+#endif
+
+void signal(int signal)
+{
+  QCoreApplication::instance()->quit();
+}
+
 int main(int argc, char *argv[])
 {
   AgrParser argParser(argc, argv);
@@ -10,9 +20,15 @@ int main(int argc, char *argv[])
 
   initLog("ServerController");
 
+#ifdef Q_OS_LINUX
+  signal(SIGINT, signal);
+  signal(SIGTERM, signal);
+#endif
+
   Application a(argc, argv);
   a.start();
 
-  finishgLog(1);
-  return 0;
+  a.exitApp();
+
+  finishgLog(0);
 }

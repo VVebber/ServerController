@@ -1,31 +1,31 @@
-// #ifndef ARP_H
-// #define ARP_H
+#ifndef ARP_PING_H
+#define ARP_PING_H
 
-// #include <net/if_arp.h>
+#include <net/if_arp.h>
 
-// #include "../RawSocket.h"
+#include "../RawSocket.h"
 
-// class ARP : public RawSocket
-// {
-// public:
-//   ARP();
+class ARP_Ping : public RawSocket
+{
+public:
+  ARP_Ping();
 
-//   void process(class ObjectInfo& info);
+  void process(char* ip, struct NetAdapter& adapter);
 
-// private:
-//   struct aprPacker
-//   {
-//     struct arphdr header;
-//     uint8_t sender_mac[6];
-//     uint8_t sender_ip[4];
-//     uint8_t target_mac[6];
-//     uint8_t target_ip[4];
-//   } __attribute__((packed));
+private:
+  struct arpPacker
+  {
+    struct arphdr header;
+    uint8_t sender_mac[6];
+    uint8_t sender_ip[4];
+    uint8_t target_mac[6];
+    uint8_t target_ip[4];
+  } __attribute__((packed));
 
 
-// };
+};
 
-// #endif // ARP_H
+#endif // ARP_PING_H
 
 
 // /*            32 bits   (char = 8 bytes,  32bits = 4 bytes);

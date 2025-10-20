@@ -9,7 +9,23 @@ struct NetAdapter
   QString name;
   QString mac;
   QString ipv4;
-  bool isAtive;
+
+  int ifIndex = -1;
+  bool isAtive = false;
+
+  bool isComplete()
+  {
+    if(mac.isEmpty())
+      return false;
+
+    if(ipv4.isEmpty())
+      return false;
+
+    if(ifIndex == -1)
+      return false;
+
+    return true;
+  }
 
   void setIp(QString prefixLengthStr)
   {

@@ -1,12 +1,8 @@
 #include "CheckPing.h"
 
-#include "../../../Common.h"
-#include "../../../AppVariables.h"
-// #include "../../../Tasks/ObjectInfo.h"
-
 #include <sys/socket.h>
 #include <netinet/in.h>
-// #include <bits/stdc++.h>
+
 #include <netinet/ip_icmp.h>
 
 #include <arpa/inet.h>
@@ -20,15 +16,16 @@ static const int countPackets = 2;
 
 CheckPing::CheckPing()
 {
-  struct timeval tv;
-  tv.tv_sec = 0;
-  tv.tv_usec = 200000; //todo:
+  qDebug()<<Q_FUNC_INFO;
 
   createSocket(AF_INET, SOCK_DGRAM, IPPROTO_ICMP);
-  setsockopt(m_socket, SOL_SOCKET, SO_RCVTIMEO, (const char*)&tv, sizeof tv);
+  setTimeval(200);
 }
 
-CheckPing::~CheckPing(){}
+CheckPing::~CheckPing()
+{
+  qDebug()<<Q_FUNC_INFO;
+}
 
 uint16_t CheckPing::checksum(void *data, int len) {
   uint16_t *buf = (uint16_t *)data;

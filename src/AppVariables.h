@@ -13,7 +13,7 @@ class AppVariables
 
 public:
   static AppVariables& instance();
-
+  static void resetInstance();
   void add(const QString &key, const QVariant &value) {
     QMutexLocker locker(&m_mutex);
     m_variables.insert(key, value);
@@ -36,6 +36,7 @@ public:
 
 private:
   AppVariables();
+  ~AppVariables();
   AppVariables(const AppVariables&) = delete;
   AppVariables& operator=(const AppVariables&) = delete;
 

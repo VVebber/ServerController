@@ -20,6 +20,7 @@ private:
   bool getCurrentIp();
 
 private slots:
+  void quit();
   void process();
   void timerEvent(QTimerEvent* event) override;
 

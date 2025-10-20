@@ -8,6 +8,7 @@ class Application : public QCoreApplication
   Q_OBJECT
 public:
   Application(int &argc, char **argv);
+  ~Application();
 
   int start();
 
@@ -17,6 +18,7 @@ public slots:
 private:
   bool initialize();
   bool startHTTP();
+  bool startCommandController();
 };
 
 #endif // APPLICATION_H

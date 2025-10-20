@@ -3,7 +3,7 @@
 #include "../Common.h"
 #include "../AppVariables.h"
 #include "../Network/Protocol/ICMP/CheckPing.h"
-#include "../Network/Protocol/ARP/ARP.h"
+#include "../Network/Protocol/ARP/ARP_Ping.h"
 
 #include "../Models/DeviceInfo.h"
 
@@ -13,11 +13,10 @@
 #include <QSharedPointer>
 
 CheckPing NetworkSkan::m_CheckPing;
-
+ARP_Ping NetworkSkan::m_ARP_ping;
 
 NetworkSkan::NetworkSkan(NetAdapter adapter): m_adapter(adapter)
 {
-  qDebug()<<Q_FUNC_INFO;
   m_appVariables = &AppVariables::instance();
 
   m_timer = new QTimer;
@@ -38,7 +37,7 @@ void NetworkSkan::updateAdapter(NetAdapter adapter)
 
 void NetworkSkan::start()
 {
-  qDebug()<<m_adapter.name<<": "<<Q_FUNC_INFO;
+  qDebug()<<Q_FUNC_INFO<< m_adapter.name<<"[status: "<<m_adapter.isAtive<<"]";
 
   bool iFind = true;
 
@@ -46,19 +45,16 @@ void NetworkSkan::start()
   m_lastPing.start();
 
 
-  QObject::connect(m_timer, &QTimer::timeout, [=](){
+  QObject::connect(m_timer, &QTimer::timeout, [this](){
+    if(!m_adapter.isAtive)
+      return;
 
-    if(m_lastPing.hasExpired(1 * 1 * 1000))
+    if(m_lastPing.hasExpired(1 * 5 * 1000) && false)
     {
       ping();
       m_lastPing.restart();
     }
 
-    if(m_lastARP.hasExpired(2 * 60 * 1000))
-    {
-      // qDebug()<<"Ping";
-      m_lastARP.elapsed();
-    }
   });
   m_timer->start();
 }
@@ -81,6 +77,12 @@ void NetworkSkan::ping()
   int max1 = (count >= 1 ? 255 : 0);
 
 
+  m_ARP_ping.process("192.168.1.151", m_adapter);
+
+  PingRes res =  m_CheckPing.process("192.168.1.151");
+  qDebug()<< res.received;
+
+
   return;
   for(int i3 = 0; i3 <= max2; i3++)
   {
@@ -88,6 +90,8 @@ void NetworkSkan::ping()
     {
       for(int i1 = 0; i1 <= max1; i1++)
       {
+        //192.168.0.%0
+        //192.%2.%1.%0
         m_CheckPing.process(m_adapter.ipv4.arg(i1).toStdString().c_str());
       }
     }
@@ -98,5 +102,6 @@ void NetworkSkan::ping()
 void NetworkSkan::stop()
 {
   m_timer->stop();
+  // m_lastARP
   // QObject::disconnect(m_timer, &QTimer::timeout);
 }
