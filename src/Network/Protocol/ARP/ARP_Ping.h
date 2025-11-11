@@ -5,12 +5,18 @@
 
 #include "../RawSocket.h"
 
+struct ArpPingRes
+{
+  char* ip;
+  char mac[18];
+};
+
 class ARP_Ping : public RawSocket
 {
 public:
   ARP_Ping();
 
-  void process(char* ip, struct NetAdapter& adapter);
+  ArpPingRes process(const char* ip, struct NetAdapter& adapter);
 
 private:
   struct arpPacker

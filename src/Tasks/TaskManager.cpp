@@ -5,6 +5,8 @@
 #include "../Common.h"
 #include "../AppVariables.h"
 #include "../Models/NetAdapter.h"
+#include "../HTTPServer/Request.h"
+#include "../Common/JsonBuilder.h"
 #include "../Network/NetworkSkan.h"
 
 #include <QDebug>
@@ -28,6 +30,12 @@ TaskManager* TaskManager::instance()
     connect(m_taskManager, &TaskManager::finished, taskThread, &QThread::quit);
     connect(taskThread, &QThread::finished, m_taskManager, &TaskManager::quit);
 
+    NetworkSkan& skan = NetworkSkan::instance();
+    connect(taskThread, &QThread::started, &skan, &NetworkSkan::run);
+
+    connect(m_taskManager, &TaskManager::finished, &skan, &NetworkSkan::stop, Qt::DirectConnection);
+    connect(m_taskManager, &TaskManager::updateAdapterList, &skan, &NetworkSkan::updateAdapterList);
+
     taskThread->start();
   }
 
@@ -45,12 +53,6 @@ void TaskManager::resetInstance()
     taskThread->quit();
     taskThread->wait();
 
-    // while(taskThread->isRunning())
-    // {
-    //   QThread::msleep(1);
-    //   QCoreApplication::instance()->processEvents(QEventLoop::AllEvents, 100);
-    // }
-
     delete taskThread;
     delete m_taskManager;
   }
@@ -64,9 +66,8 @@ TaskManager::TaskManager()
 
 TaskManager::~TaskManager()
 {
+  emit finished();
   qDebug()<<Q_FUNC_INFO;
-
-
 }
 
 void TaskManager::quit()
@@ -76,12 +77,6 @@ void TaskManager::quit()
   if (m_idTimer) {
     killTimer(m_idTimer);
     m_idTimer = 0;
-  }
-
-  for(auto& skan : m_networkSkanList)
-  {
-    skan->stop();
-    delete skan;
   }
 }
 
@@ -98,23 +93,18 @@ void TaskManager::process()
 void TaskManager::timerEvent(QTimerEvent* event)
 {
   qDebug()<<Q_FUNC_INFO;
-  fetchInterfaceInfo();
+  QList<NetAdapter>  adapters = fetchInterfaceInfo();
 
-  QVariant v = AppVariables::instance().get(KEY_NET_ADAPTERS);
-  QList<NetAdapter> adapters = v.value<QList<NetAdapter>>();
+  emit updateAdapterList(adapters);
+
+  Request req;
+  req.type = Request::POST;
+  req.url = "http://localhost:3000/adapter/upsert/"; //TODO?
 
   for(auto& adapter : adapters)
   {
-    if(m_networkSkanList.contains(adapter.name))
-    {
-      m_networkSkanList[adapter.name]->updateAdapter(adapter);
-      continue;
-    }
-
-    NetworkSkan* scan = new NetworkSkan(adapter);
-
-    m_networkSkanList.insert(adapter.name, scan);
-    scan->start();
+    req.data = JsonBuilder::toJson(adapter);
+    RequestSender::instance().addRequest(req);
   }
 }
 
@@ -130,7 +120,7 @@ bool TaskManager::getCurrentIp()
     {
       QString ip = match.captured(0);
       qDebug() << "Current machine IP: "<< ip;
-      m_appVariables->add(KEY_CURRENT_IP, ip);
+      m_appVariables->setCurrentIp(ip);
       return true;
     }
   }
@@ -139,9 +129,10 @@ bool TaskManager::getCurrentIp()
   return false;
 }
 
-void TaskManager::fetchInterfaceInfo()
+QList<NetAdapter> TaskManager::fetchInterfaceInfo()
 {
   qDebug()<<Q_FUNC_INFO;
+  QList<NetAdapter> adapterList;
 
   QStringList args = {UNIX_ARG_ADDR};
   ConsoleCommand ipShow;
@@ -150,14 +141,7 @@ void TaskManager::fetchInterfaceInfo()
   {
     QStringList lines =ipShow.m_standartOut.split("\n", Qt::SkipEmptyParts);
 
-    QList<NetAdapter> adapterList;
     NetAdapter currentAdapter;
-
-    if(m_appVariables->contains(KEY_NET_ADAPTERS))
-    {
-      QVariant v = m_appVariables->get(KEY_NET_ADAPTERS);
-      adapterList = v.value<QList<NetAdapter>>();
-    }
 
     QRegularExpression macRegex(R"(link/\w+\s+([0-9a-fA-F]{2}(?::[0-9a-fA-F]{2}){5}))");
     QRegularExpression ifInterfaceRegex(R"(\d+: ([^:]+))");
@@ -203,8 +187,8 @@ void TaskManager::fetchInterfaceInfo()
     }
     addAdapter(adapterList, currentAdapter);
 
-    m_appVariables->add(KEY_NET_ADAPTERS, QVariant::fromValue(adapterList));
   }
+  return adapterList;
 }
 
 void TaskManager::addAdapter(QList<NetAdapter>& adapterList, NetAdapter& adapter)

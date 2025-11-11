@@ -1,107 +1,139 @@
 #include "NetworkSkan.h"
 
 #include "../Common.h"
-#include "../AppVariables.h"
-#include "../Network/Protocol/ICMP/CheckPing.h"
-#include "../Network/Protocol/ARP/ARP_Ping.h"
 
+#include "Workers/PingWorker.h"
 #include "../Models/DeviceInfo.h"
+#include "../HTTPServer/Request.h"
+#include "../Common/JsonBuilder.h"
 
 #include <QMutex>
-#include <QTimer>
-#include <QElapsedTimer>
-#include <QSharedPointer>
+#include <QDebug>
 
-CheckPing NetworkSkan::m_CheckPing;
-ARP_Ping NetworkSkan::m_ARP_ping;
-
-NetworkSkan::NetworkSkan(NetAdapter adapter): m_adapter(adapter)
+NetworkSkan::NetworkSkan()
 {
-  m_appVariables = &AppVariables::instance();
-
-  m_timer = new QTimer;
   m_mutex = new QMutex;
 }
 
 NetworkSkan::~NetworkSkan()
 {
-  delete m_timer;
   delete m_mutex;
 }
 
-void NetworkSkan::updateAdapter(NetAdapter adapter)
+NetworkSkan& NetworkSkan::instance()
 {
-  m_adapter = adapter;
+  static NetworkSkan instance;
+  return instance;
 }
 
-
-void NetworkSkan::start()
-{
-  qDebug()<<Q_FUNC_INFO<< m_adapter.name<<"[status: "<<m_adapter.isAtive<<"]";
-
-  bool iFind = true;
-
-  m_timer->setInterval(1 * 1000);
-  m_lastPing.start();
-
-
-  QObject::connect(m_timer, &QTimer::timeout, [this](){
-    if(!m_adapter.isAtive)
-      return;
-
-    if(m_lastPing.hasExpired(1 * 5 * 1000) && false)
-    {
-      ping();
-      m_lastPing.restart();
-    }
-
-  });
-  m_timer->start();
-}
-
-void NetworkSkan::ping()
+void NetworkSkan::resetInstance()
 {
   qDebug()<<Q_FUNC_INFO;
+}
 
-  SharedDeviceList DeviseList;
-
-  if(m_appVariables->contains(KEY_DEVICE_LIST))
+void NetworkSkan::updateAdapterList(QList<NetAdapter> adapters)
+{
+  for(auto& adapter : adapters)
   {
-    QVariant v = m_appVariables->get(KEY_DEVICE_LIST);
-    DeviseList = v.value<SharedDeviceList>();
-  }
-
-  int count = m_adapter.ipv4.count("%");
-  int max3 = (count >= 3 ? 255 : 0);
-  int max2 = (count >= 2 ? 255 : 0);
-  int max1 = (count >= 1 ? 255 : 0);
-
-
-  m_ARP_ping.process("192.168.1.151", m_adapter);
-
-  PingRes res =  m_CheckPing.process("192.168.1.151");
-  qDebug()<< res.received;
-
-
-  return;
-  for(int i3 = 0; i3 <= max2; i3++)
-  {
-    for(int i2 = 0; i2 <= max2; i2++)
+    if(m_adapters.contains(adapter.name))
     {
-      for(int i1 = 0; i1 <= max1; i1++)
-      {
-        //192.168.0.%0
-        //192.%2.%1.%0
-        m_CheckPing.process(m_adapter.ipv4.arg(i1).toStdString().c_str());
-      }
+      m_adapters[adapter.name] = adapter;
+      continue;
     }
+
+    m_adapters.insert(adapter.name, adapter);
   }
-  //Тут будет ping по Adapter и добавление в SharedDeviceList;
+
+  if(m_pingWorker)
+  {
+    m_pingWorker->isUpdate();
+    emit updateAdaptersMap(m_adapters);
+  }
+}
+
+void NetworkSkan::AddDeviceInfo(DeviceInfo* devise)
+{
+  qDebug()<<devise->getIpv4()<<":"<<devise->getMac();
+
+  int i = find(m_devices, devise);
+  if(i != -1)
+  {
+    m_devices[i] = devise;
+  }
+  else
+  {
+    m_devices.push_back(devise);
+  }
+
+  Request req;
+  req.type = Request::POST;
+  req.url = "http://localhost:3000/device/upsert";
+  req.data = JsonBuilder::toJson(devise);
+
+  RequestSender::instance().addRequest(req);
+}
+
+void NetworkSkan::run()
+{
+  qDebug()<<Q_FUNC_INFO;
+  startPing();
+
+  Request req;
+  req.type = Request::GET;
+  req.url = "http://localhost:3000/device/";
+  req.callback = [this](const QString& res){
+    this->handleDeviceListResponse(res);
+  };
+
+  RequestSender::instance().addRequest(req);
+
+  exec();
 }
 
 void NetworkSkan::stop()
 {
-  m_timer->stop();
-  // m_lastARP
-  // QObject::disconnect(m_timer, &QTimer::timeout);
+  stopPing();
+
+  quit();
+  wait();
+}
+
+void NetworkSkan::handleDeviceListResponse(const QString& response)
+{
+  qDebug()<<response;
+}
+
+void NetworkSkan::startPing()
+{
+  stopPing();
+
+  m_pingWorker = new PingWorker(m_adapters);
+  m_pingThread = new QThread;
+
+  m_pingWorker->moveToThread(m_pingThread);
+
+  connect(m_pingThread, &QThread::started, m_pingWorker, &PingWorker::startScan);
+  connect(m_pingWorker, &PingWorker::finished, m_pingThread, &QThread::quit);
+  connect(this, &NetworkSkan::updateAdaptersMap, m_pingWorker, &PingWorker::update);
+  connect(m_pingWorker, &PingWorker::addDeviceInfo, this, &NetworkSkan::AddDeviceInfo);
+
+  m_pingThread->start();
+}
+
+void NetworkSkan::stopPing()
+{
+  if (m_pingThread) {
+    m_pingWorker->stop();
+
+    m_pingThread->quit();
+
+    while(m_pingThread->isRunning())
+
+    m_pingThread->wait();
+
+
+
+    delete m_pingThread;
+    delete m_pingWorker;
+  }
 }

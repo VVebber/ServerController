@@ -1,21 +1,21 @@
-#ifndef LLDP_H
-#define LLDP_H
+// #ifndef LLDP_H
+// #define LLDP_H
 
-#include "../RawSocket.h"
+// #include "../RawSocket.h"
 
-class LLDP : public RawSocket
-{
-public:
-  LLDP();
+// class LLDP : public RawSocket
+// {
+// public:
+//   LLDP();
 
-  void process();
+//   void process();
 
-private:
+// private:
 
 
-};
+// };
 
-#endif // LLDP_H
+// #endif // LLDP_H
 
 // /*
 //   LLDP (Link Layer Discovery Protocol) — работает на 2 уровне модели OSI (канальном).

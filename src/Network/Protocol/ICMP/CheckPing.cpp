@@ -2,7 +2,6 @@
 
 #include <sys/socket.h>
 #include <netinet/in.h>
-
 #include <netinet/ip_icmp.h>
 
 #include <arpa/inet.h>
@@ -150,9 +149,9 @@ PingRes CheckPing::process(const char* ip)
   result.received = successReplies;
   if (successReplies > 0)
   {
-    result.acgMs = totalTime /successReplies;
+    return result;
   }
-  return result;
+  return PingRes();
 }
 
 //Работа утилиты traceroute

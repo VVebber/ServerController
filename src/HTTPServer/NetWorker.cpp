@@ -7,94 +7,101 @@
 #include <QNetworkRequest>
 #include <QNetworkAccessManager>
 
-NetWorker::NetWorker(const QString& url) : m_url(url)
-{
-
-}
-
-QString NetWorker::postRequest(QString& data)
+NetWorker::NetWorker()
 {
   qDebug()<<Q_FUNC_INFO;
-  QUrl url = m_url;
-  QString res = "";
-
-  QEventLoop loop;
-
-  QNetworkReply* reply = nullptr;
-  QNetworkRequest request(url);    //Объект запроса
-  QNetworkAccessManager manager;
-
-  QTimer timer;
-  timer.setInterval(2000);
-  timer.setSingleShot(true);
-
-  request.setHeader(QNetworkRequest::ContentTypeHeader,"application/x-www-form-urlencoded");
-
-  bool isConnected = connect(&manager, &QNetworkAccessManager::finished,
-                             &loop, [&loop](QNetworkReply*) { loop.quit(); });
-
-  if(isConnected)
-    isConnected = connect(&timer, &QTimer::timeout, &loop, &QEventLoop::quit);
-
-  if(isConnected)
-  {
-    reply = manager.post(request, data.toUtf8());  //Запрос
-    loop.exec();
-
-    if(!timer.isActive())
-    {
-      isConnected = false;
-    } else timer.stop();
-  }
-
-  if(isConnected)
-  {
-    if(reply->error() == QNetworkReply::NoError)
-    {
-     res = reply->readAll();
-    }
-  }
-
-  if(reply != nullptr)
-  {
-    if(!isConnected)
-      reply->abort();
-    reply->deleteLater();
-  }
-  return res;
+  m_isBusy = false;
+  m_manager = new QNetworkAccessManager(this);
 }
 
-QString NetWorker::getRequest()
+NetWorker::~NetWorker()
 {
-  QUrl url = m_url;
-  QEventLoop getLoop;
+  qDebug()<<Q_FUNC_INFO;
+  delete m_manager;
+}
 
-  QNetworkAccessManager manager;
-  QNetworkRequest request(url);
+void NetWorker::addRequest(Request requst)
+{
+  m_requests.push_back(requst);
+
+  if(!m_isBusy)
+    processNext();
+}
+
+void NetWorker::processNext()
+{
+  if(m_requests.isEmpty()) return;
+
+  m_isBusy = true;
+  Request req = m_requests.dequeue();
+
+  QNetworkRequest request(req.url);
+  request.setHeader(QNetworkRequest::ContentTypeHeader, "application/json");
+
+  switch (req.type) {
+    case Request::GET:
+      getRequest(request, req);
+      break;
+    case Request::POST:
+      postRequest(request, req);
+      break;
+
+    default:
+      break;
+  }
+}
+
+void NetWorker::getRequest(QNetworkRequest& request, Request req)
+{
+  qDebug()<<Q_FUNC_INFO;
   QNetworkReply *reply = nullptr;
 
-  bool isConnected = connect(&manager, &QNetworkAccessManager::finished,
-                             &getLoop, [&getLoop](QNetworkReply*) { getLoop.quit(); });
-
-  QString res;
-  if(isConnected)
+  connect(m_manager, &QNetworkAccessManager::finished, this,
+          [this, req](QNetworkReply* reply)
   {
+    onReplyFinished(reply, req);
+  });
 
-    reply = manager.get(request);
-    getLoop.exec();
+  m_manager->get(request);
+}
 
-    if(reply->error() == QNetworkReply::NoError)
-    {
-      res = QString::fromUtf8(reply->readAll());
-    }
-    else
-    {
-      qDebug()<<"error:"<< reply->error();
-    }
+
+void NetWorker::postRequest(QNetworkRequest& request, Request req)
+{
+  qDebug()<<Q_FUNC_INFO;
+  QNetworkReply* reply = nullptr;
+
+  QJsonDocument doc(req.data);
+  reply = m_manager->post(request, doc.toJson());
+
+  connect(reply, &QNetworkReply::finished, this, [this, reply, req]() {
+      onReplyFinished(reply, req);
+  });
+}
+
+
+void NetWorker::onReplyFinished(QNetworkReply* reply, Request req)
+{
+  QString response = "";
+
+  if(reply->error() == QNetworkReply::NoError)
+  {
+    response = QString::fromUtf8(reply->readAll());
+  }
+  else
+  {
+    qDebug()<<"error:"<< reply->readAll();
   }
 
-  if(reply != nullptr)
-    reply->deleteLater();
+  if(reply->isRunning())
+    reply->abort();
 
-  return res;
+  reply->deleteLater();
+
+
+  m_isBusy = false;
+  if(req.callback)
+    req.callback(response);
+
+  processNext();
 }

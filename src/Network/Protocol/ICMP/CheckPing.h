@@ -8,13 +8,42 @@
 
 struct PingRes
 {
-  char* ip;
-  int errorCode;
+  char* ip = nullptr;
+  int errorCode = 0;
   int sent = 0;
   int received = 0;
   float acgMs = -1;
   float minMs = -1;
   float maxMs = -1;
+
+  ~PingRes() {
+    delete[] ip;
+    ip = nullptr;
+  }
+
+  PingRes() = default;
+  PingRes(const PingRes&) = delete;
+  PingRes& operator=(const PingRes&) = delete;
+
+  PingRes(PingRes&& other) noexcept {
+      *this = std::move(other);
+  }
+
+  PingRes& operator=(PingRes&& other) noexcept {
+      if (this != &other) {
+          delete[] ip;
+          ip = other.ip;
+          errorCode = other.errorCode;
+          sent = other.sent;
+          received = other.received;
+          acgMs = other.acgMs;
+          minMs = other.minMs;
+          maxMs = other.maxMs;
+
+          other.ip = nullptr;
+      }
+      return *this;
+  }
 };
 
 class CheckPing : public RawSocket

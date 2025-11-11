@@ -18,7 +18,10 @@ public slots:
 private:
   bool initialize();
   bool startHTTP();
-  bool startCommandController();
+  // bool startCommandController();
+
+private:
+  class NetWorker* m_netWorker;
 };
 
 #endif // APPLICATION_H

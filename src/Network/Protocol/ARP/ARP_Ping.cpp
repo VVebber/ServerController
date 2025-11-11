@@ -19,17 +19,22 @@ ARP_Ping::ARP_Ping()
 }
 
 
-void ARP_Ping::process(char* ip, struct NetAdapter& adapter)
+ArpPingRes ARP_Ping::process(const char* ip, struct NetAdapter& adapter)
 {
+  ArpPingRes res;
+  res.ip = new char[strlen(ip) + 1];
+  std::strcpy(res.ip, ip);
+
   AppVariables& variables = AppVariables::instance();
 
-  QString senderIp = variables.get(KEY_CURRENT_IP).toString();
+  QString senderIp = variables.getCurrentIp();
 
   unsigned char senderMac[6];
 
+
   if(!parseMacAddress(adapter.mac, senderMac))
   {
-    return;
+    return ArpPingRes();
   }
 
   struct sockaddr_ll devise = {};
@@ -41,7 +46,7 @@ void ARP_Ping::process(char* ip, struct NetAdapter& adapter)
   if(bind(m_socket, (struct sockaddr*) & devise, sizeof(struct sockaddr_ll)) < 0)
   {
     qWarning()<<"bind: "<< strerror(errno);
-    return;
+    return ArpPingRes();
   }
 
   arpPacker arp = {};
@@ -71,7 +76,7 @@ void ARP_Ping::process(char* ip, struct NetAdapter& adapter)
   if(ret == -1)
   {
     qWarning()<<"sendto"<< strerror(errno);
-    return;
+    return ArpPingRes();
   }
 
 
@@ -108,16 +113,18 @@ void ARP_Ping::process(char* ip, struct NetAdapter& adapter)
       continue;
     }
 
-    QString macStr;
-    for (int i = 0; i < 6; ++i)
-        macStr += QString("%1:").arg(arp_resp->sender_mac[i], 2, 16, QChar('0')).toUpper();
-    macStr.chop(1); // убираем последний ':'
+    sprintf(res.mac, "%02X:%02X:%02X:%02X:%02X:%02X",
+            arp_resp->sender_mac[0],
+            arp_resp->sender_mac[1],
+            arp_resp->sender_mac[2],
+            arp_resp->sender_mac[3],
+            arp_resp->sender_mac[4],
+            arp_resp->sender_mac[5]);
 
-    qDebug() << "Received ARP reply from" << ip << "MAC:" << macStr;
-    break;
+    return res;
   }
 
-
+  return ArpPingRes();
 }
 
 

@@ -7,17 +7,18 @@
 class TaskManager : public QObject
 {
   Q_OBJECT
-
-signals:
-  void finished();
-
 private:
   TaskManager();
   ~TaskManager();
-  void fetchInterfaceInfo();
+
+  QList<class NetAdapter> fetchInterfaceInfo();
   void addAdapter(QList<class NetAdapter>& adapterList, NetAdapter& adapter);
 
   bool getCurrentIp();
+
+signals:
+  void updateAdapterList(QList<NetAdapter> adapter);
+  void finished();
 
 private slots:
   void quit();

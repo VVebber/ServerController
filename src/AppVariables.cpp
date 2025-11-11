@@ -1,10 +1,4 @@
 #include "AppVariables.h"
-// #include "Tasks/ObjectInfo.h"
-// #include "Models/NetAdapter.h"
-
-// #include <QMetaType>
-
-// Q_DECLARE_METATYPE(QList<ObjectInfo>)
 
 AppVariables::AppVariables()
 {
@@ -22,7 +16,11 @@ AppVariables& AppVariables::instance()
   return instance;
 }
 
-void AppVariables::resetInstance()
+void AppVariables::setCurrentIp(const QString& ip)
 {
+  m_currentIp = ip;
+}
 
+QString AppVariables::getCurrentIp() const{
+  return m_currentIp;
 }

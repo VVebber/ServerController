@@ -1,36 +1,50 @@
 #ifndef NETWORKSKAN_H
 #define NETWORKSKAN_H
 
-#include <QElapsedTimer>
 #include "../Models/NetAdapter.h"
+#include "../Models/DeviceInfo.h"
 
-class NetworkSkan
+#include <QMap>
+#include <QThread>
+
+class NetworkSkan : public QThread
 {
+  Q_OBJECT
 public:
-  NetworkSkan(NetAdapter adapter);
-  ~NetworkSkan();
+  static NetworkSkan& instance();
+  void resetInstance();
 
-  void start();
+public slots:
+  void run() override;
   void stop();
+  void updateAdapterList(QList<NetAdapter> adapter);
+  void AddDeviceInfo(DeviceInfo* device);
 
-  void updateAdapter(NetAdapter adapter);
+signals:
+  void updateAdaptersMap(QMap<QString, NetAdapter> adapters);
 
 private:
-  void ping();
+  NetworkSkan();
+  ~NetworkSkan();
+
+  void startPing();
+  void stopPing();
+
+  void handleDeviceListResponse(const QString& response);
+
+private:
 
 private:
   class QMutex *m_mutex;
-  class QTimer *m_timer;
 
-  QElapsedTimer m_lastPing;
+  QThread* m_pingThread;
+  class PingWorker* m_pingWorker;
 
-  static class CheckPing m_CheckPing;
-  static class ARP_Ping m_ARP_ping;
-
-  NetAdapter m_adapter;
-  class AppVariables* m_appVariables;
+  QMap<QString, NetAdapter> m_adapters;
+  QList<DeviceInfo*> m_devices;
 };
 
 #endif // NETWORKSKAN_H
 
-
+// SSHWorker / WinRMWorker — отдельные потоки при необходимости.
+// NetFlowWorker — отдельный поток для обработки потоковой информации.

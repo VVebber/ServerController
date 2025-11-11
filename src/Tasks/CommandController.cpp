@@ -25,6 +25,7 @@ bool CommandController::start()
 void CommandController::initICommands()
 {
   // ....
+
 }
 
 void CommandController::resetInstance()

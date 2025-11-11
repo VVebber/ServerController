@@ -1,17 +1,35 @@
 #ifndef NETWORKER_H
 #define NETWORKER_H
 
+#include "./Request.h"
+
+#include <QQueue>
 #include <QObject>
 
 class NetWorker : public QObject
 {
 public:
-  NetWorker(const QString& url = "");
+  NetWorker();
+  ~NetWorker();
 
-  QString getRequest();
-  QString postRequest(QString& data);
+public slots:
+  void addRequest(Request requst);
+
+private slots:
+  void onReplyFinished(class QNetworkReply* reply, Request req);
+
 private:
-  QString m_url;
+  void processNext();
+
+  void getRequest(class QNetworkRequest& request, Request req);
+  void postRequest(class QNetworkRequest& request, Request req);
+
+private:
+  class QNetworkAccessManager* m_manager;
+
+  QQueue<Request> m_requests;
+
+  bool m_isBusy;
 };
 
 #endif // NETWORKER_H

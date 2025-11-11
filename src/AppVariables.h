@@ -13,26 +13,9 @@ class AppVariables
 
 public:
   static AppVariables& instance();
-  static void resetInstance();
-  void add(const QString &key, const QVariant &value) {
-    QMutexLocker locker(&m_mutex);
-    m_variables.insert(key, value);
-  }
 
-  QVariant get(const QString &key, const QVariant &defaultValue = QVariant()) const {
-    QMutexLocker locker(&m_mutex);
-    return m_variables.value(key, defaultValue);
-  }
-
-  bool contains(const QString &key) const {
-    QMutexLocker locker(&m_mutex);
-    return m_variables.contains(key);
-  }
-
-  void remove(const QString &key) {
-    QMutexLocker locker(&m_mutex);
-    m_variables.remove(key);
-  }
+  void setCurrentIp(const QString& ip);
+  QString getCurrentIp() const;
 
 private:
   AppVariables();
@@ -41,8 +24,7 @@ private:
   AppVariables& operator=(const AppVariables&) = delete;
 
 private:
-  QMultiMap<QString, QVariant> m_variables;
-  mutable QMutex m_mutex;
+  QString m_currentIp;
 };
 
 #endif // APPVARIABLES_H

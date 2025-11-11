@@ -24,8 +24,14 @@ const QString UNIX_ARG_LINK            = "link";
 const QString UNIX_ARG_ADDR            = "addr";
 const QString UNIX_ARG_SHOW            = "show";
 
+const QString SCHEME_HTTP              = "http";
+
+const int WINRM_PORT                   = 5985;
+const QString WINRM_PATH               = "/wsman";
+
 static constexpr unsigned char BROADCAST_MAC[6] = {0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF};
 
 bool parseMacAddress(const QString& macStr, unsigned char mac[6]);
+int find(QList<class DeviceInfo*> devices, DeviceInfo* device);
 
 #endif // COMMON_H
